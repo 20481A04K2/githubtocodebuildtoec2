@@ -23,9 +23,12 @@ phases:
   pre_build:
     commands:
       - echo "Authenticating to CodeArtifact..."
-      - >
-        aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO
-        --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION
+      - |
+        aws codeartifact login --tool twine \
+          --repository $CODEARTIFACT_REPO \
+          --domain $CODEARTIFACT_DOMAIN \
+          --domain-owner $DOMAIN_OWNER \
+          --region $REGION
 
   build:
     commands:
@@ -53,6 +56,16 @@ phases:
         echo "Deploying to EC2 and installing package from CodeArtifact..."
         ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP << 'EOF'
           echo "Authenticating on EC2..."
+          # Ensure AWS CLI is installed
+          if ! command -v aws &> /dev/null; then
+            sudo apt update && sudo apt install -y awscli
+          fi
+
+          # Ensure pip is installed
+          if ! command -v pip &> /dev/null; then
+            sudo apt update && sudo apt install -y python3-pip
+          fi
+
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
             --domain vamsi \
