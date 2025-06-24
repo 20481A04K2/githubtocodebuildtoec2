@@ -75,7 +75,7 @@ phases:
 
           echo "Installing uploaded package from CodeArtifact..."
           pip install --upgrade my-python-app \
-            --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ \
+            --extra-index-url https://aws:$CODEARTIFACT_AUTH_TOKEN@vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ \
             --trusted-host vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com \
             --extra-index-url https://pypi.org/simple
         EOF
