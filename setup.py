@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='my-python-app',
-    version='0.1.0',
+    version='0.1.1',
     packages=find_packages(),
     install_requires=[],  # Add dependencies here if needed
     entry_points={
