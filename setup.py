@@ -1,7 +1,6 @@
 from setuptools import setup, find_packages
 
-# Load version from version.py
-exec(open("my-python-app/version.py").read())
+
 
 setup(
     name='my-python-app',
