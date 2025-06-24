@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     CODEARTIFACT_DOMAIN: "vamsi"
-    CODEARTIFACT_REPO: "vamsi-repository"
+    CODEARTIFACT_REPO: "pypi-store"
     REGION: "ap-south-1"
     EC2_PUBLIC_IP: "3.110.55.7"
     EC2_USER: "ubuntu"
