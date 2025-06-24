@@ -27,11 +27,8 @@ phases:
       - echo "__version__ = '0.1.${VERSION_TAG}'" > $PACKAGE_NAME/version.py
       - echo "Generated version: 0.1.${VERSION_TAG}"
       - echo "Authenticating to CodeArtifact..."
-      - aws codeartifact login --tool twine \
-          --repository $CODEARTIFACT_REPO \
-          --domain $CODEARTIFACT_DOMAIN \
-          --domain-owner $DOMAIN_OWNER \
-          --region $REGION
+      - aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO --domain $CODEARTIFACT_DOMAIN --domain-owner 337243655832 --region $REGION
+
 
   build:
     commands:
