@@ -22,10 +22,7 @@ phases:
 
   pre_build:
     commands:
-      - echo "Generating unique version based on timestamp..."
-      - export VERSION_TAG=$(date +%Y%m%d%H%M%S)
-      - echo "__version__ = '0.1.${VERSION_TAG}'" > $PACKAGE_NAME/version.py
-      - echo "Generated version: 0.1.${VERSION_TAG}"
+      - echo "Authenticating to CodeArtifact..."
       - >
         aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO
         --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION
