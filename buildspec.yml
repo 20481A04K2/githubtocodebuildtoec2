@@ -33,15 +33,8 @@ phases:
   post_build:
     commands:
       - echo "Uploading package to CodeArtifact..."
-      - twine upload \
-          --repository-url https://$CODEARTIFACT_DOMAIN-$DOMAIN_OWNER.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ \
-          -u aws \
-          -p $(aws codeartifact get-authorization-token \
-                --domain $CODEARTIFACT_DOMAIN \
-                --domain-owner $DOMAIN_OWNER \
-                --region $REGION \
-                --query authorizationToken --output text) \
-          dist/*
+      - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION --query authorizationToken --output text)
+      - twine upload --repository-url https://$CODEARTIFACT_DOMAIN-$DOMAIN_OWNER.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ -u aws -p $CODEARTIFACT_AUTH_TOKEN dist/*
 
       - echo "Fetching SSH key from AWS SSM Parameter Store..."
       - aws ssm get-parameter \
