@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     CODEARTIFACT_DOMAIN: "vamsi"
-    CODEARTIFACT_REPO: "pypi-store"
+    CODEARTIFACT_REPO: "vamsi-repository"
     REGION: "ap-south-1"
     EC2_PUBLIC_IP: "3.110.55.7"
     EC2_USER: "ubuntu"
@@ -20,12 +20,12 @@ phases:
   pre_build:
     commands:
       - echo "Authenticating to CodeArtifact..."
-      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - export ACCOUNT_ID
-      - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+      - aws codeartifact login \
+          --tool twine \
+          --repository $CODEARTIFACT_REPO \
           --domain $CODEARTIFACT_DOMAIN \
-          --region $REGION \
-          --query authorizationToken --output text)
+          --domain-owner 337243655832 \
+          --region $REGION
 
   build:
     commands:
@@ -35,13 +35,8 @@ phases:
   post_build:
     commands:
       - echo "Uploading to CodeArtifact..."
-      - |
-        twine upload \
-          --repository-url https://$CODEARTIFACT_DOMAIN-$ACCOUNT_ID.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ \
-          -u aws \
-          -p $CODEARTIFACT_AUTH_TOKEN \
-          dist/*
-
+      - twine upload dist/*
+      
       - echo "Fetching SSH key from Parameter Store..."
       - aws ssm get-parameter \
           --name "$PARAM_NAME" \
