@@ -1,59 +1,35 @@
 version: 0.2
-
 env:
   variables:
     CODEARTIFACT_DOMAIN: "vamsi"
     CODEARTIFACT_REPO: "vamsi-repository"
     REGION: "ap-south-1"
+    DOMAIN_OWNER: "337243655832"
     EC2_PUBLIC_IP: "3.110.55.7"
     EC2_USER: "ubuntu"
     PARAM_NAME: "vamsi-parameter"
     PACKAGE_NAME: "my-python-app"
-    DOMAIN_OWNER: "337243655832"
-
 phases:
   install:
     runtime-versions:
       python: 3.11
     commands:
-      - echo "Installing required Python tools..."
-      - pip install --upgrade pip
-      - pip install build twine
-
+      - echo "Installing required Python tools..." && pip install --upgrade pip && pip install build twine
   pre_build:
     commands:
-      - echo "Authenticating to CodeArtifact using aws codeartifact login..."
-      - aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION
-
+      - echo "Generating unique version..." && export VERSION_TAG=$(date +%Y%m%d%H%M%S) && echo "__version__ = '0.1.${VERSION_TAG}'" > $PACKAGE_NAME/version.py && echo "Generated version: 0.1.${VERSION_TAG}"
+      - echo "Authenticating to CodeArtifact..." && aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION
   build:
     commands:
-      - echo "Building Python package..."
-      - python -m build
-
+      - echo "Building Python package..." && python -m build
   post_build:
     commands:
-      - echo "Uploading package to CodeArtifact..."
-      - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION --query authorizationToken --output text)
-      - twine upload --repository-url https://$CODEARTIFACT_DOMAIN-$DOMAIN_OWNER.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ -u aws -p $CODEARTIFACT_AUTH_TOKEN dist/*
-
-      - echo "Fetching SSH key from AWS SSM Parameter Store..."
-      - aws ssm get-parameter --name "$PARAM_NAME" --with-decryption --query Parameter.Value --output text > key.pem
-
-      - chmod 400 key.pem
-
-      - echo "Deploying to EC2 and installing package from CodeArtifact..."
+      - echo "Fetching CodeArtifact token..." && export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $DOMAIN_OWNER --region $REGION --query authorizationToken --output text)
+      - echo "Uploading package to CodeArtifact..." && twine upload --repository-url https://$CODEARTIFACT_DOMAIN-$DOMAIN_OWNER.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ -u aws -p $CODEARTIFACT_AUTH_TOKEN dist/*
+      - echo "Fetching SSH key..." && aws ssm get-parameter --name "$PARAM_NAME" --with-decryption --query Parameter.Value --output text > key.pem && chmod 400 key.pem
       - |
-        ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP << 'EOF'
-          echo "Installing package from CodeArtifact in EC2..."
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
-            --domain vamsi \
-            --domain-owner $ACCOUNT_ID \
-            --region ap-south-1 \
-            --query authorizationToken --output text)
-
-          pip install --upgrade my-python-app \
-            --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ \
-            --trusted-host vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com \
-            --extra-index-url https://pypi.org/simple
+        echo "Deploying to EC2..." && ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP << 'EOF'
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain vamsi --domain-owner $ACCOUNT_ID --region ap-south-1 --query authorizationToken --output text)
+        pip install --upgrade my-python-app --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ --trusted-host vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com --extra-index-url https://pypi.org/simple
         EOF
