@@ -46,15 +46,15 @@ phases:
       - |
         echo "Deploying to EC2..."
         ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP << 'EOF'
-        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
-          --domain vamsi \
-          --domain-owner $ACCOUNT_ID \
-          --region ap-south-1 \
-          --query authorizationToken --output text)
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+            --domain vamsi \
+            --domain-owner $ACCOUNT_ID \
+            --region ap-south-1 \
+            --query authorizationToken --output text)
 
-        pip install --upgrade my-python-app \
-          --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ \
-          --trusted-host vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com \
-          --extra-index-url https://pypi.org/simple
+          pip install --upgrade my-python-app \
+            --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/ \
+            --trusted-host vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com \
+            --extra-index-url https://pypi.org/simple
         EOF
