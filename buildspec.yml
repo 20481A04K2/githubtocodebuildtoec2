@@ -35,12 +35,13 @@ phases:
   post_build:
     commands:
       - echo "Uploading to CodeArtifact..."
-      - twine upload \
+      - |
+        twine upload \
           --repository-url https://$CODEARTIFACT_DOMAIN-$ACCOUNT_ID.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ \
           -u aws \
           -p $CODEARTIFACT_AUTH_TOKEN \
           dist/*
-          
+
       - echo "Fetching SSH key from Parameter Store..."
       - aws ssm get-parameter \
           --name "$PARAM_NAME" \
@@ -52,12 +53,14 @@ phases:
       - echo "Deploying to EC2..."
       - |
         ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP << 'EOF'
+          echo "Getting CodeArtifact token..."
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
             --domain vamsi \
             --region ap-south-1 \
             --query authorizationToken --output text)
 
+          echo "Installing package from CodeArtifact..."
           pip install --upgrade my-python-app \
             --extra-index-url https://vamsi-$ACCOUNT_ID.d.codeartifact.ap-south-1.amazonaws.com/pypi/vamsi-repository/simple/
         EOF
