@@ -1,3 +1,5 @@
+from setuptools import setup, find_packages
+
 setup(
     name='my-python-app',
     version='0.1.10',
