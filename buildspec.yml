@@ -2,11 +2,13 @@ version: 0.2
 
 env:
   variables:
-    CODEARTIFACT_DOMAIN: "my-domain"
-    CODEARTIFACT_REPO: "my-python-repo"
+    CODEARTIFACT_DOMAIN: "vamsi"
+    CODEARTIFACT_REPO: "vamsi-repository"
     REGION: "ap-south-1"
-    PACKAGE_NAME: "my-python-app"
-    PARAM_INSTANCE_ID: "/prod/ec2/my-python-app-id"
+    EC2_PUBLIC_IP: "3.110.55.7"
+    EC2_USER: "ubuntu"
+    PARAM_NAME: "vamsi-parameter"
+    PACKAGE_NAME: "my-python-app"   
 
 phases:
   install:
@@ -16,37 +18,33 @@ phases:
       - pip install --upgrade pip build twine
   pre_build:
     commands:
+      - echo "Authenticating to CodeArtifact..."
       - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
       - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
-          --domain $CODEARTIFACT_DOMAIN --region $REGION \
+          --domain $CODEARTIFACT_DOMAIN \
+          --region $REGION \
           --query authorizationToken --output text)
   build:
     commands:
+      - echo "Building Python package..."
       - python -m build
   post_build:
     commands:
       - echo "Uploading to CodeArtifact..."
       - twine upload --repository-url https://$CODEARTIFACT_DOMAIN-$ACCOUNT_ID.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/ \
           -u aws -p $CODEARTIFACT_AUTH_TOKEN dist/*
-      - echo "Fetching EC2 Instance ID from SSM..."
-      - INSTANCE_ID=$(aws ssm get-parameter --name "$PARAM_INSTANCE_ID" --query "Parameter.Value" --output text)
-      - echo "Sending install command to EC2 via SSM..."
-      - aws ssm send-command \
-          --document-name "AWS-RunShellScript" \
-          --region $REGION \
-          --instance-ids "$INSTANCE_ID" \
-          --comment "Install and run $PACKAGE_NAME from CodeArtifact" \
-          --parameters 'commands=[
-            "sudo apt update && sudo apt install -y python3-pip unzip curl",
-            "curl \\"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\\" -o \\"awscliv2.zip\\"",
-            "unzip awscliv2.zip && sudo ./aws/install",
-            "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)",
-            "export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain '$CODEARTIFACT_DOMAIN' --region '$REGION' --query authorizationToken --output text)",
-            "pip install --upgrade '$PACKAGE_NAME' --extra-index-url https://'$CODEARTIFACT_DOMAIN'-'$ACCOUNT_ID'.d.codeartifact.'$REGION'.amazonaws.com/pypi/'$CODEARTIFACT_REPO'/simple/",
-            "myapp"
-          ]'
-
-artifacts:
-  files:
-    - dist/*.whl
-    - dist/*.tar.gz
+      - echo "Fetching SSH key from Parameter Store..."
+      - aws ssm get-parameter \
+          --name "$PARAM_NAME" \
+          --with-decryption \
+          --query Parameter.Value \
+          --output text > key.pem
+      - chmod 400 key.pem
+      - echo "Deploying to EC2..."
+      - ssh -o StrictHostKeyChecking=no -i key.pem $EC2_USER@$EC2_PUBLIC_IP <<EOF
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          export CODEARTIFACT_AUTH_TOKEN=\$(aws codeartifact get-authorization-token \
+            --domain $CODEARTIFACT_DOMAIN --region $REGION --query authorizationToken --output text)
+          pip install --upgrade $PACKAGE_NAME \
+            --extra-index-url https://$CODEARTIFACT_DOMAIN-\$ACCOUNT_ID.d.codeartifact.$REGION.amazonaws.com/pypi/$CODEARTIFACT_REPO/simple/
+        EOF
