@@ -20,12 +20,7 @@ phases:
   pre_build:
     commands:
       - echo "Authenticating to CodeArtifact..."
-      - aws codeartifact login \
-          --tool twine \
-          --repository $CODEARTIFACT_REPO \
-          --domain $CODEARTIFACT_DOMAIN \
-          --domain-owner 337243655832 \
-          --region $REGION
+      - aws codeartifact login --tool twine --repository $CODEARTIFACT_REPO --domain $CODEARTIFACT_DOMAIN --domain-owner 337243655832 --region $REGION
 
   build:
     commands:
